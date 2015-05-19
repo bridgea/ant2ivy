@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Grapes([
-    @Grab(group='org.slf4j', module='slf4j-simple', version='1.6.6') 
+    @Grab(group='org.slf4j', module='slf4j-simple', version='1.6.6')
 ])
 
 //
@@ -47,12 +47,21 @@ class Ant2Ivy {
     String artifactId
     String repoUrl
 
-    Ant2Ivy(groupId, artifactId, repoUrl) {
+    Ant2Ivy(groupId, artifactId, repoUrl, username, password) {
         this.groupId = groupId
         this.artifactId = artifactId
         this.repoUrl = repoUrl
+        if (username && password) setDefaultAuthenticator(username, password)
 
         log.debug "groupId: {}, artifactId: {}", groupId, artifactId
+    }
+
+    def setDefaultAuthenticator(username, password) {
+        Authenticator.setDefault (new Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication (username, password.toCharArray());
+            }
+        })
     }
 
     //
@@ -213,6 +222,8 @@ cli.with {
     s longOpt: 'sourcedir',  args: 1, 'Source directory containing jars', required: true
     t longOpt: 'targetdir',  args: 1, 'Target directory where write ivy build files', required: true
     r longOpt: 'nexusUrl',   args: 1, 'Alternative Nexus repository URL'
+    u longOpt: 'username',   args: 1, 'Nexus login id'
+    p longOpt: 'password',   args: 1, 'Nexus login password'
 }
                                                                 
 def options = cli.parse(args)
@@ -225,11 +236,13 @@ if (options.help) {
 }
 
 def nexusUrl = (options.nexusUrl) ? options.nexusUrl : "http://repository.sonatype.org"
+String username = options.username
+String password = options.password
 
-// 
+//
 // Generate ivy configuration
 //
-def ant2ivy = new Ant2Ivy(options.groupid, options.artifactid, nexusUrl)
+def ant2ivy = new Ant2Ivy(options.groupid, options.artifactid, nexusUrl, username, password)
 def srcDir  = new File(options.sourcedir)
 def trgDir  = new File(options.targetdir)
 
